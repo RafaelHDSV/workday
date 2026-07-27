@@ -8,7 +8,8 @@ $script:WorkdaySessionsRoot = $PSScriptRoot
 $script:WorkdayLookbackDays = 0
 $script:WorkdaySuspectHours = 36
 $script:WorkdayMinSessionHours = 2
-$script:WorkdayUnlockGraceHours = 2
+# Ignore Event Log noise from before continuous tracking (April leftovers).
+$script:WorkdayEarliestDate = [datetime]'2026-06-01'
 
 function Get-WorkdayDataDir {
     $dir = Join-Path $script:WorkdaySessionsRoot 'data'
@@ -290,53 +291,6 @@ function New-WorkdaySessions {
     return @($sessions.ToArray())
 }
 
-function Get-WorkdayFirstUnlock {
-    param(
-        [datetime]$After,
-        [datetime]$Before
-    )
-
-    try {
-        $found = @(Get-WinEvent -FilterHashtable @{
-                LogName      = 'System'
-                ProviderName = 'Microsoft-Windows-Kernel-Power'
-                Id           = 566
-                StartTime    = $After
-                EndTime      = $Before
-            } -ErrorAction Stop | Sort-Object TimeCreated)
-    }
-    catch {
-        return $null
-    }
-
-    foreach ($ev in $found) {
-        if ($ev.Message -match 'SessionUnlock') {
-            return $ev.TimeCreated
-        }
-    }
-    return $null
-}
-
-function Update-WorkdaySessionWorkStart {
-    param(
-        [Parameter(Mandatory = $true)]
-        [object[]]$Sessions
-    )
-
-    foreach ($session in $Sessions) {
-        $graceEnd = $session.Start.AddHours($script:WorkdayUnlockGraceHours)
-        if ($null -ne $session.End -and $graceEnd -gt $session.End) {
-            $graceEnd = $session.End
-        }
-        $unlock = Get-WorkdayFirstUnlock -After $session.Start -Before $graceEnd
-        if ($null -ne $unlock -and $unlock -gt $session.Start) {
-            $session.Start = $unlock
-        }
-    }
-
-    return $Sessions
-}
-
 function Test-WorkdayAtypicalSession {
     param(
         [Parameter(Mandatory = $true)]
@@ -608,8 +562,9 @@ function Sync-WorkdaySessions {
         $now = Get-Date
 
         $events = Get-WorkdayPowerEvents -LookbackDays $LookbackDays
-        $sessions = New-WorkdaySessions -Events $events -Now $now
-        $sessions = @(Update-WorkdaySessionWorkStart -Sessions $sessions)
+        $sessions = @(New-WorkdaySessions -Events $events -Now $now | Where-Object {
+                $_.Start.Date -ge $script:WorkdayEarliestDate.Date
+            })
 
         Save-WorkdaySessions -Sessions $sessions -Path $jsonPath
         Write-WorkdayExtrasMarkdown -Sessions $sessions -EntryHour $EntryHour -LeaveHour $LeaveHour -Path $mdPath -Now $now
