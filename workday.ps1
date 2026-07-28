@@ -56,6 +56,8 @@ $script:WindowHandle = [IntPtr]::Zero
 $script:HiddenUntil = $null
 $script:Dragging = $false
 
+$script:OmitExtrasDates = @()
+
 function Apply-WorkdayRuntimeConfig {
     param([object]$Config)
 
@@ -65,16 +67,23 @@ function Apply-WorkdayRuntimeConfig {
     $script:LeaveHour = [int]$Config.leaveHour
     $script:TrayOffsetPx = [int]$Config.trayOffsetPx
     $script:MarginBottom = [int]$Config.marginBottom
+    if ($null -ne $Config.PSObject.Properties['omitExtrasDates'] -and $null -ne $Config.omitExtrasDates) {
+        $script:OmitExtrasDates = @($Config.omitExtrasDates | ForEach-Object { [string]$_ })
+    }
+    else {
+        $script:OmitExtrasDates = @()
+    }
 }
 
 function Get-WorkdayRuntimeConfig {
     return [pscustomobject]@{
-        entryHour      = $script:EntryHour
-        lunchStartHour = $script:LunchStartHour
-        lunchEndHour   = $script:LunchEndHour
-        leaveHour      = $script:LeaveHour
-        trayOffsetPx   = $script:TrayOffsetPx
-        marginBottom   = $script:MarginBottom
+        entryHour       = $script:EntryHour
+        lunchStartHour  = $script:LunchStartHour
+        lunchEndHour    = $script:LunchEndHour
+        leaveHour       = $script:LeaveHour
+        trayOffsetPx    = $script:TrayOffsetPx
+        marginBottom    = $script:MarginBottom
+        omitExtrasDates = @($script:OmitExtrasDates)
     }
 }
 

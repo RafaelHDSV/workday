@@ -25,12 +25,13 @@ function Get-WorkdayConfigPath {
 
 function Get-WorkdayDefaultConfig {
     return [pscustomobject]@{
-        entryHour      = 9
-        lunchStartHour = 13
-        lunchEndHour   = 14
-        leaveHour      = 18
-        trayOffsetPx   = 215
-        marginBottom   = -35
+        entryHour        = 9
+        lunchStartHour   = 13
+        lunchEndHour     = 14
+        leaveHour        = 18
+        trayOffsetPx     = 215
+        marginBottom     = -35
+        omitExtrasDates  = @()
     }
 }
 
@@ -55,6 +56,9 @@ function Read-WorkdayConfig {
             $cfg.$name = [int]$raw.$name
         }
     }
+    if ($null -ne $raw.PSObject.Properties['omitExtrasDates'] -and $null -ne $raw.omitExtrasDates) {
+        $cfg.omitExtrasDates = @($raw.omitExtrasDates | ForEach-Object { [string]$_ })
+    }
     return $cfg
 }
 
@@ -65,13 +69,18 @@ function Save-WorkdayConfig {
     )
 
     $path = Get-WorkdayConfigPath
+    $omit = @()
+    if ($null -ne $Config.PSObject.Properties['omitExtrasDates'] -and $null -ne $Config.omitExtrasDates) {
+        $omit = @($Config.omitExtrasDates | ForEach-Object { [string]$_ })
+    }
     $obj = [ordered]@{
-        entryHour      = [int]$Config.entryHour
-        lunchStartHour = [int]$Config.lunchStartHour
-        lunchEndHour   = [int]$Config.lunchEndHour
-        leaveHour      = [int]$Config.leaveHour
-        trayOffsetPx   = [int]$Config.trayOffsetPx
-        marginBottom   = [int]$Config.marginBottom
+        entryHour       = [int]$Config.entryHour
+        lunchStartHour  = [int]$Config.lunchStartHour
+        lunchEndHour    = [int]$Config.lunchEndHour
+        leaveHour       = [int]$Config.leaveHour
+        trayOffsetPx    = [int]$Config.trayOffsetPx
+        marginBottom    = [int]$Config.marginBottom
+        omitExtrasDates = $omit
     }
     $json = ($obj | ConvertTo-Json)
     $utf8Bom = New-Object System.Text.UTF8Encoding $true
@@ -395,6 +404,7 @@ function Write-WorkdayExtrasMarkdown {
         [object[]]$Sessions,
         [int]$EntryHour = 9,
         [int]$LeaveHour = 18,
+        [string[]]$OmitExtrasDates = @(),
         [string]$Path,
         [datetime]$Now = (Get-Date)
     )
@@ -405,6 +415,13 @@ function Write-WorkdayExtrasMarkdown {
     $weekendLate = [TimeSpan]::Zero
     $suspectCount = 0
     $atypicalSessions = New-Object System.Collections.ArrayList
+    $omitSet = @{}
+    foreach ($d in @($OmitExtrasDates)) {
+        if (-not [string]::IsNullOrWhiteSpace($d)) {
+            $omitSet[$d.Trim()] = $true
+        }
+    }
+    $omittedApplied = New-Object System.Collections.ArrayList
 
     # Aggregate by date: @{ DateKey -> stats }
     $byDay = @{}
@@ -423,6 +440,13 @@ function Write-WorkdayExtrasMarkdown {
         $slices = Get-WorkdayOvertime -Session $session -EntryHour $EntryHour -LeaveHour $LeaveHour -Now $Now
         foreach ($slice in $slices) {
             $key = $slice.Date.ToString('yyyy-MM-dd')
+            $omitExtras = $omitSet.ContainsKey($key)
+            $early = if ($omitExtras) { [TimeSpan]::Zero } else { $slice.Early }
+            $late = if ($omitExtras) { [TimeSpan]::Zero } else { $slice.Late }
+            if ($omitExtras -and ($omittedApplied -notcontains $key)) {
+                [void]$omittedApplied.Add($key)
+            }
+
             if (-not $byDay.ContainsKey($key)) {
                 $byDay[$key] = [pscustomobject]@{
                     Date      = $slice.Date
@@ -436,8 +460,8 @@ function Write-WorkdayExtrasMarkdown {
             }
 
             $row = $byDay[$key]
-            $row.Early += $slice.Early
-            $row.Late += $slice.Late
+            $row.Early += $early
+            $row.Late += $late
             if ($slice.SliceStart -lt $row.MinStart) { $row.MinStart = $slice.SliceStart }
             if ($slice.Open) {
                 $row.Open = $true
@@ -448,12 +472,12 @@ function Write-WorkdayExtrasMarkdown {
             }
 
             if ($slice.IsWeekend) {
-                $weekendEarly += $slice.Early
-                $weekendLate += $slice.Late
+                $weekendEarly += $early
+                $weekendLate += $late
             }
             else {
-                $weekdayEarly += $slice.Early
-                $weekdayLate += $slice.Late
+                $weekdayEarly += $early
+                $weekdayLate += $late
             }
         }
     }
@@ -543,6 +567,12 @@ function Write-WorkdayExtrasMarkdown {
         [void]$sb.AppendLine(('> Nota: {0} sess' + [char]0x00E3 + 'o(es) suspeita(s) (dura' + [char]0x00E7 + [char]0x00E3 + 'o > {1}h) omitidas dos totais.' -f $suspectCount, $script:WorkdaySuspectHours))
     }
 
+    if ($omittedApplied.Count -gt 0) {
+        $list = ($omittedApplied | Sort-Object) -join ', '
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine(('> Extras zerados (omitExtrasDates): {0}' -f $list))
+    }
+
     $utf8Bom = New-Object System.Text.UTF8Encoding $true
     [System.IO.File]::WriteAllText($Path, $sb.ToString(), $utf8Bom)
 }
@@ -567,7 +597,12 @@ function Sync-WorkdaySessions {
             })
 
         Save-WorkdaySessions -Sessions $sessions -Path $jsonPath
-        Write-WorkdayExtrasMarkdown -Sessions $sessions -EntryHour $EntryHour -LeaveHour $LeaveHour -Path $mdPath -Now $now
+        $cfg = Read-WorkdayConfig
+        $omitDates = @()
+        if ($null -ne $cfg.PSObject.Properties['omitExtrasDates'] -and $null -ne $cfg.omitExtrasDates) {
+            $omitDates = @($cfg.omitExtrasDates)
+        }
+        Write-WorkdayExtrasMarkdown -Sessions $sessions -EntryHour $EntryHour -LeaveHour $LeaveHour -OmitExtrasDates $omitDates -Path $mdPath -Now $now
 
         return [pscustomobject]@{
             Ok           = $true

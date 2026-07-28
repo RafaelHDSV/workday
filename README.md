@@ -63,4 +63,5 @@ O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o hist�
 - **Dias úteis** e **fim de semana** têm totais separados
 - Detecta ligar/desligar (incluindo sleep híbrido do “Desligar” no Windows moderno)
 - Sessões curtas (&lt; 2h) vão para **Dias atípicos**
+- **`omitExtrasDates`:** lista `yyyy-MM-dd` com extras forçados a 0 (casos à parte)
 - A pasta `data/` é local e está no `.gitignore`
