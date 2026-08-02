@@ -1,4 +1,4 @@
-﻿# Workday — overlay de expediente
+# Workday — overlay de expediente
 
 Overlay leve com contagens do expediente (entrada, almoço, saída e extras), posicionado junto à barra de tarefas, com log de horas extras.
 
@@ -65,3 +65,7 @@ O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o hist�
 - Sessões curtas (&lt; 2h) vão para **Dias atípicos**
 - **`omitExtrasDates`:** lista `yyyy-MM-dd` com extras forçados a 0 (casos à parte)
 - A pasta `data/` é local e está no `.gitignore`
+
+## Apoie
+
+<a href="https://www.buymeacoffee.com/vieira" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;" ></a>
