@@ -1,13 +1,13 @@
 ﻿# Extras — workday
 
-Atualizado: 2026-08-03 08:57
+Atualizado: 2026-08-04 08:52
 
 ## Resumo — dias úteis
 | | Tempo |
 |--|--|
-| Antes das 09:00 | 7h30m |
-| Depois das 18:00 | 13h11m |
-| **Total extras** | **20h41m** |
+| Antes das 09:00 | 7h33m |
+| Depois das 18:00 | 13h17m |
+| **Total extras** | **20h51m** |
 
 ## Resumo — fim de semana
 | | Tempo |
@@ -19,7 +19,8 @@ Atualizado: 2026-08-03 08:57
 ## Por dia (dias úteis)
 | Data | Ligou | Desligou | Early | Late | Total |
 |------|-------|----------|-------|------|-------|
-| 2026-08-03 | 08:56 | _em andamento_ | 0h01m | 0h00m | 0h01m |
+| 2026-08-04 | 08:51 | _em andamento_ | 0h01m | 0h00m | 0h01m |
+| 2026-08-03 | 08:56 | 18:06 | 0h03m | 0h06m | 0h10m |
 | 2026-07-31 | 08:47 | 18:08 | 0h12m | 0h08m | 0h20m |
 | 2026-07-30 | 08:59 | 16:56 | 0h00m | 0h00m | 0h00m |
 | 2026-07-29 | 08:57 | 18:39 | 0h02m | 0h39m | 0h41m |
