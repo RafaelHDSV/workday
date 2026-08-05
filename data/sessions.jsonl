@@ -41,4 +41,6 @@
 {"start":"2026-07-30T16:56:59.9448228-03:00","end":"2026-07-30T18:16:43.7684408-03:00","closedBy":"event","suspect":false,"source":"event-log"}
 {"start":"2026-07-31T08:47:48.9368755-03:00","end":"2026-07-31T18:08:06.5170832-03:00","closedBy":"event","suspect":false,"source":"event-log"}
 {"start":"2026-08-03T08:56:01.1372102-03:00","end":"2026-08-03T18:06:11.3834807-03:00","closedBy":"event","suspect":false,"source":"event-log"}
-{"start":"2026-08-04T08:51:46.8624018-03:00","end":null,"closedBy":"open","suspect":false,"source":"event-log"}
+{"start":"2026-08-04T08:51:46.8624018-03:00","end":"2026-08-04T12:20:56.1160825-03:00","closedBy":"event","suspect":false,"source":"event-log"}
+{"start":"2026-08-04T12:21:25.9436839-03:00","end":"2026-08-04T16:00:16.3118319-03:00","closedBy":"event","suspect":false,"source":"event-log"}
+{"start":"2026-08-05T08:59:25.9020707-03:00","end":null,"closedBy":"open","suspect":false,"source":"event-log"}

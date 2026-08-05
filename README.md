@@ -60,10 +60,12 @@ O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o hist�
 | `data/config.json` | Horários e posição |
 
 - **Early / Late:** usam `entryHour` / `leaveHour` da config
+- **Short (saída antecipada):** em dias úteis encerrados, tempo entre o último desligamento e `leaveHour` (ex.: saiu 16:00 → 2h de déficit)
+- **Total líquido:** Early + Late − Short (pode ser negativo no dia; saldo global no resumo)
 - **Dias úteis** e **fim de semana** têm totais separados
 - Detecta ligar/desligar (incluindo sleep híbrido do “Desligar” no Windows moderno)
-- Sessões curtas (&lt; 2h) vão para **Dias atípicos**
-- **`omitExtrasDates`:** lista `yyyy-MM-dd` com extras forçados a 0 (casos à parte)
+- Sessões curtas (&lt; 2h) vão para **Dias atípicos** (reinícios no mesmo dia com gap ≤ 30 min são fundidos antes do relatório)
+- **`omitExtrasDates`:** lista `yyyy-MM-dd` com Early, Late e Short forçados a 0 (casos à parte)
 - A pasta `data/` é local e está no `.gitignore`
 
 ## Apoie

@@ -8,6 +8,8 @@ $script:WorkdaySessionsRoot = $PSScriptRoot
 $script:WorkdayLookbackDays = 0
 $script:WorkdaySuspectHours = 36
 $script:WorkdayMinSessionHours = 2
+# Same-day sessions separated by a shorter gap are treated as one workday (PC restart).
+$script:WorkdayMergeGapMinutes = 30
 # Ignore Event Log noise from before continuous tracking (April leftovers).
 $script:WorkdayEarliestDate = [datetime]'2026-06-01'
 
@@ -123,6 +125,32 @@ function Format-WorkdayDuration([TimeSpan]$span) {
     if ($span -lt [TimeSpan]::Zero) { $span = [TimeSpan]::Zero }
     $hours = [int][Math]::Floor($span.TotalHours)
     return '{0}h{1:D2}m' -f $hours, $span.Minutes
+}
+
+function Format-WorkdaySignedDuration([TimeSpan]$span) {
+    $sign = if ($span -lt [TimeSpan]::Zero) { '-' } else { '' }
+    $abs = if ($span -lt [TimeSpan]::Zero) { -$span } else { $span }
+    return $sign + (Format-WorkdayDuration $abs)
+}
+
+function Get-WorkdayDayShort {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Row,
+        [int]$LeaveHour = 18,
+        [bool]$OmitExtras = $false
+    )
+
+    if ($OmitExtras -or $Row.Open -or $null -eq $Row.MaxEnd -or $Row.IsWeekend) {
+        return [TimeSpan]::Zero
+    }
+
+    $leaveAt = $Row.Date.AddHours($LeaveHour)
+    if ($Row.MaxEnd -lt $leaveAt) {
+        return $leaveAt - $Row.MaxEnd
+    }
+
+    return [TimeSpan]::Zero
 }
 
 function Get-WorkdayIntervalIntersection {
@@ -300,6 +328,51 @@ function New-WorkdaySessions {
     return @($sessions.ToArray())
 }
 
+function Merge-WorkdaySameDaySessions {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Sessions,
+        [int]$MaxGapMinutes = $script:WorkdayMergeGapMinutes
+    )
+
+    if ($Sessions.Count -eq 0) {
+        return @()
+    }
+
+    $sorted = @($Sessions | Sort-Object Start)
+    $merged = New-Object System.Collections.ArrayList
+    $current = $sorted[0]
+
+    for ($i = 1; $i -lt $sorted.Count; $i++) {
+        $next = $sorted[$i]
+        $sameDay = ($current.Start.Date -eq $next.Start.Date)
+        $gap = if ($null -eq $current.End) {
+            [TimeSpan]::MaxValue
+        }
+        else {
+            $next.Start - $current.End
+        }
+        $canMerge = $sameDay -and ($null -ne $current.End) -and ($gap.TotalMinutes -le $MaxGapMinutes)
+
+        if ($canMerge) {
+            $current = [pscustomobject]@{
+                Start    = $current.Start
+                End      = $next.End
+                ClosedBy = $next.ClosedBy
+                Suspect  = [bool]($current.Suspect -or $next.Suspect)
+                Source   = 'merged'
+            }
+        }
+        else {
+            [void]$merged.Add($current)
+            $current = $next
+        }
+    }
+
+    [void]$merged.Add($current)
+    return @($merged.ToArray())
+}
+
 function Test-WorkdayAtypicalSession {
     param(
         [Parameter(Mandatory = $true)]
@@ -411,6 +484,7 @@ function Write-WorkdayExtrasMarkdown {
 
     $weekdayEarly = [TimeSpan]::Zero
     $weekdayLate = [TimeSpan]::Zero
+    $weekdayShort = [TimeSpan]::Zero
     $weekendEarly = [TimeSpan]::Zero
     $weekendLate = [TimeSpan]::Zero
     $suspectCount = 0
@@ -493,9 +567,16 @@ function Write-WorkdayExtrasMarkdown {
     [void]$sb.AppendLine(('## Resumo — dias ' + [char]0x00FA + 'teis'))
     [void]$sb.AppendLine('| | Tempo |')
     [void]$sb.AppendLine('|--|--|')
+    foreach ($row in $weekdayRows) {
+        $key = $row.Date.ToString('yyyy-MM-dd')
+        $omitExtras = $omitSet.ContainsKey($key)
+        $weekdayShort += (Get-WorkdayDayShort -Row $row -LeaveHour $LeaveHour -OmitExtras $omitExtras)
+    }
+
     [void]$sb.AppendLine(('| Antes das {0:D2}:00 | {1} |' -f $EntryHour, (Format-WorkdayDuration $weekdayEarly)))
     [void]$sb.AppendLine(('| Depois das {0:D2}:00 | {1} |' -f $LeaveHour, (Format-WorkdayDuration $weekdayLate)))
-    [void]$sb.AppendLine(('| **Total extras** | **{0}** |' -f (Format-WorkdayDuration ($weekdayEarly + $weekdayLate))))
+    [void]$sb.AppendLine(('| Sa' + [char]0x00ED + 'da antecipada | {0} |' -f (Format-WorkdayDuration $weekdayShort)))
+    [void]$sb.AppendLine(('| **Total l' + [char]0x00ED + 'quido** | **{0}** |' -f (Format-WorkdaySignedDuration ($weekdayEarly + $weekdayLate - $weekdayShort))))
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('## Resumo — fim de semana')
     [void]$sb.AppendLine('| | Tempo |')
@@ -505,23 +586,27 @@ function Write-WorkdayExtrasMarkdown {
     [void]$sb.AppendLine(('| **Total** | **{0}** |' -f (Format-WorkdayDuration ($weekendEarly + $weekendLate))))
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine(('## Por dia (dias ' + [char]0x00FA + 'teis)'))
-    [void]$sb.AppendLine('| Data | Ligou | Desligou | Early | Late | Total |')
-    [void]$sb.AppendLine('|------|-------|----------|-------|------|-------|')
+    [void]$sb.AppendLine('| Data | Ligou | Desligou | Early | Late | Short | Total |')
+    [void]$sb.AppendLine('|------|-------|----------|-------|------|-------|-------|')
 
     foreach ($row in $weekdayRows) {
+        $key = $row.Date.ToString('yyyy-MM-dd')
+        $omitExtras = $omitSet.ContainsKey($key)
         $endText = if ($row.Open -or $null -eq $row.MaxEnd) { '_em andamento_' } else { $row.MaxEnd.ToString('HH:mm') }
-        $total = $row.Early + $row.Late
-        [void]$sb.AppendLine(('| {0} | {1} | {2} | {3} | {4} | {5} |' -f `
+        $short = Get-WorkdayDayShort -Row $row -LeaveHour $LeaveHour -OmitExtras $omitExtras
+        $net = $row.Early + $row.Late - $short
+        [void]$sb.AppendLine(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} |' -f `
                 $row.Date.ToString('yyyy-MM-dd'),
             $row.MinStart.ToString('HH:mm'),
             $endText,
             (Format-WorkdayDuration $row.Early),
             (Format-WorkdayDuration $row.Late),
-            (Format-WorkdayDuration $total)))
+            (Format-WorkdayDuration $short),
+            (Format-WorkdaySignedDuration $net)))
     }
 
     if ($weekdayRows.Count -eq 0) {
-        [void]$sb.AppendLine('| _(sem dados)_ | | | | | |')
+        [void]$sb.AppendLine('| _(sem dados)_ | | | | | | |')
     }
 
     [void]$sb.AppendLine('')
@@ -548,7 +633,7 @@ function Write-WorkdayExtrasMarkdown {
     if ($atypicalSessions.Count -gt 0) {
         [void]$sb.AppendLine('')
         [void]$sb.AppendLine(('## Dias at' + [char]0x00ED + 'picos (omitidos dos totais)'))
-        [void]$sb.AppendLine('Sessões curtas (< 2h) — costumam ser wake/sleep acidental, não o expediente.')
+        [void]$sb.AppendLine('Sessões curtas (< 2h) sem continuação no mesmo dia — costumam ser wake/sleep acidental, não o expediente.')
         [void]$sb.AppendLine('| Data | Ligou | Desligou | Duração |')
         [void]$sb.AppendLine('|------|-------|----------|---------|')
         foreach ($session in ($atypicalSessions | Sort-Object Start -Descending)) {
@@ -597,12 +682,13 @@ function Sync-WorkdaySessions {
             })
 
         Save-WorkdaySessions -Sessions $sessions -Path $jsonPath
+        $reportSessions = Merge-WorkdaySameDaySessions -Sessions $sessions
         $cfg = Read-WorkdayConfig
         $omitDates = @()
         if ($null -ne $cfg.PSObject.Properties['omitExtrasDates'] -and $null -ne $cfg.omitExtrasDates) {
             $omitDates = @($cfg.omitExtrasDates)
         }
-        Write-WorkdayExtrasMarkdown -Sessions $sessions -EntryHour $EntryHour -LeaveHour $LeaveHour -OmitExtrasDates $omitDates -Path $mdPath -Now $now
+        Write-WorkdayExtrasMarkdown -Sessions $reportSessions -EntryHour $EntryHour -LeaveHour $LeaveHour -OmitExtrasDates $omitDates -Path $mdPath -Now $now
 
         return [pscustomobject]@{
             Ok           = $true
