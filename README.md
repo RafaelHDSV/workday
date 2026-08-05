@@ -1,17 +1,19 @@
 # Workday — overlay de expediente
 
-Overlay leve com contagens do expediente (entrada, almoço, saída e extras), posicionado junto à barra de tarefas, com log de horas extras.
+Contador discreto do expediente que fica encostado na barra de tarefas, sempre à vista, mostrando quanto falta para entrar, almoçar e sair — e quanto tempo extra já passou da saída. Junto, gera um relatório de horas extras a partir do histórico de ligar/desligar do próprio Windows, sem necessidade de registrar horários manualmente.
 
-## Executar (sem CMD aberto)
+Roda em PowerShell, sem instalação, oculta-se nos fins de semana e mantém a posição e os horários configuráveis.
 
-Dê **duplo clique** em `workday-start.vbs` (ou em `workday-start.bat`, que chama o VBS).
+## Executar (sem janela de console)
 
-O VBS sobe o PowerShell em modo oculto — nenhuma janela de console fica aberta.
+Dê **duplo clique** em `workday-start.bat`.
+
+O overlay sobe em modo oculto — nenhuma janela de console fica aberta, só o contador na barra de tarefas.
 
 ## Iniciar com o Windows (opcional)
 
 1. Pressione `Win + R`, digite `shell:startup` e confirme.
-2. Crie um atalho para **`workday-start.vbs`** nessa pasta.
+2. Crie um atalho para **`workday-start.bat`** nessa pasta.
 
 Para remover: apague o atalho e encerre o processo PowerShell do overlay (Gerenciador de Tarefas).
 
