@@ -1,5 +1,6 @@
 data/
 docs/*
+.ai
 .claude
 .cursor
 .opencode
