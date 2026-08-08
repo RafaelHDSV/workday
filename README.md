@@ -6,11 +6,9 @@ Roda em PowerShell 5.1+, sem instalação. Some nos fins de semana; horários e 
 
 ## Demonstração
 
-[demo.mp4](demo.mp4)
-
 O vídeo mostra o overlay percorrendo as fases do contador (antes da entrada, manhã, almoço, tarde e hora extra) e o relatório de extras aberto ao lado.
 
-<video src="demo.mp4" controls width="720" title="Demonstração do Workday"></video>
+https://github.com/user-attachments/assets/06cf29e9-9973-4698-a3dc-365ad1bd4aab
 
 ## Executar (sem janela de console)
 
