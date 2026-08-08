@@ -1,14 +1,10 @@
 # Workday — overlay de expediente
 
+https://github.com/user-attachments/assets/06cf29e9-9973-4698-a3dc-365ad1bd4aab
+
 Contador discreto do expediente encostado na barra de tarefas: quanto falta para entrar, almoçar e sair, e quanto tempo extra já passou da saída. Em paralelo, gera um relatório de horas extras a partir do histórico de ligar/desligar do Windows — sem registrar horários à mão.
 
 Roda em PowerShell 5.1+, sem instalação. Some nos fins de semana; horários e posição são configuráveis.
-
-## Demonstração
-
-O vídeo mostra o overlay percorrendo as fases do contador (antes da entrada, manhã, almoço, tarde e hora extra) e o relatório de extras aberto ao lado.
-
-https://github.com/user-attachments/assets/06cf29e9-9973-4698-a3dc-365ad1bd4aab
 
 ## Executar (sem janela de console)
 
