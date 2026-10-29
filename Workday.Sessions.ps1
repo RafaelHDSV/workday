@@ -137,20 +137,30 @@ function Get-WorkdayDayShort {
     param(
         [Parameter(Mandatory = $true)]
         [object]$Row,
+        [int]$EntryHour = 9,
         [int]$LeaveHour = 18,
         [bool]$OmitExtras = $false
     )
 
-    if ($OmitExtras -or $Row.Open -or $null -eq $Row.MaxEnd -or $Row.IsWeekend) {
+    if ($OmitExtras -or $Row.IsWeekend) {
         return [TimeSpan]::Zero
     }
 
-    $leaveAt = $Row.Date.AddHours($LeaveHour)
-    if ($Row.MaxEnd -lt $leaveAt) {
-        return $leaveAt - $Row.MaxEnd
+    $deficit = [TimeSpan]::Zero
+
+    $entryAt = $Row.Date.AddHours($EntryHour)
+    if ($Row.MinStart -gt $entryAt) {
+        $deficit += ($Row.MinStart - $entryAt)
     }
 
-    return [TimeSpan]::Zero
+    if (-not $Row.Open -and $null -ne $Row.MaxEnd) {
+        $leaveAt = $Row.Date.AddHours($LeaveHour)
+        if ($Row.MaxEnd -lt $leaveAt) {
+            $deficit += ($leaveAt - $Row.MaxEnd)
+        }
+    }
+
+    return $deficit
 }
 
 function Get-WorkdayIntervalIntersection {
@@ -570,12 +580,12 @@ function Write-WorkdayExtrasMarkdown {
     foreach ($row in $weekdayRows) {
         $key = $row.Date.ToString('yyyy-MM-dd')
         $omitExtras = $omitSet.ContainsKey($key)
-        $weekdayShort += (Get-WorkdayDayShort -Row $row -LeaveHour $LeaveHour -OmitExtras $omitExtras)
+        $weekdayShort += (Get-WorkdayDayShort -Row $row -EntryHour $EntryHour -LeaveHour $LeaveHour -OmitExtras $omitExtras)
     }
 
     [void]$sb.AppendLine(('| Antes das {0:D2}:00 | {1} |' -f $EntryHour, (Format-WorkdayDuration $weekdayEarly)))
     [void]$sb.AppendLine(('| Depois das {0:D2}:00 | {1} |' -f $LeaveHour, (Format-WorkdayDuration $weekdayLate)))
-    [void]$sb.AppendLine(('| Sa' + [char]0x00ED + 'da antecipada | {0} |' -f (Format-WorkdayDuration $weekdayShort)))
+    [void]$sb.AppendLine(('| D' + [char]0x00E9 + 'ficit (atraso ou sa' + [char]0x00ED + 'da cedo) | {0} |' -f (Format-WorkdayDuration $weekdayShort)))
     [void]$sb.AppendLine(('| **Total l' + [char]0x00ED + 'quido** | **{0}** |' -f (Format-WorkdaySignedDuration ($weekdayEarly + $weekdayLate - $weekdayShort))))
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('## Resumo — fim de semana')
@@ -593,7 +603,7 @@ function Write-WorkdayExtrasMarkdown {
         $key = $row.Date.ToString('yyyy-MM-dd')
         $omitExtras = $omitSet.ContainsKey($key)
         $endText = if ($row.Open -or $null -eq $row.MaxEnd) { '_em andamento_' } else { $row.MaxEnd.ToString('HH:mm') }
-        $short = Get-WorkdayDayShort -Row $row -LeaveHour $LeaveHour -OmitExtras $omitExtras
+        $short = Get-WorkdayDayShort -Row $row -EntryHour $EntryHour -LeaveHour $LeaveHour -OmitExtras $omitExtras
         $net = $row.Early + $row.Late - $short
         [void]$sb.AppendLine(('| {0} | {1} | {2} | {3} | {4} | {5} | {6} |' -f `
                 $row.Date.ToString('yyyy-MM-dd'),

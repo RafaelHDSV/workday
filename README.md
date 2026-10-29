@@ -28,7 +28,7 @@ Em **segunda a sexta** (horários padrão; configuráveis):
 | Extra | após a saída | Contagem `+HH:mm:ss` |
 
 - **Fim de semana:** overlay oculto
-- **Clique direito → Ver extras:** atualiza e abre o relatório de horas extras
+- **Clique direito → Ver extras:** atualiza e abre o relatório de horas extras (após atualizar os scripts `.ps1`, reinicie o overlay — **Sair** e abra de novo — senão o processo antigo sobrescreve o relatório)
 - **Clique direito → Configurar…:** horários e posição (salva em `data/config.json`)
 - **Arrastar o overlay:** move e salva a posição
 - **Clique direito → Sair:** encerra o overlay
@@ -60,7 +60,7 @@ O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o hist�
 | `data/config.json` | Horários e posição |
 
 - **Early / Late:** usam `entryHour` / `leaveHour` da config
-- **Short (saída antecipada):** em dias úteis encerrados, tempo entre o último desligamento e `leaveHour` (ex.: saiu 16:00 → 2h de déficit)
+- **Short (déficit):** em dias úteis encerrados, soma de entrada após `entryHour` e saída antes de `leaveHour` (ex.: ligou 09:13 → 13 min; saiu 16:00 → 2h)
 - **Total líquido:** Early + Late − Short (pode ser negativo no dia; saldo global no resumo)
 - **Dias úteis** e **fim de semana** têm totais separados
 - Detecta ligar/desligar (incluindo sleep híbrido do “Desligar” no Windows moderno)

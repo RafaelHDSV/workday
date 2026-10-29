@@ -3,8 +3,8 @@
     "lunchStartHour":  13,
     "lunchEndHour":  14,
     "leaveHour":  18,
-    "trayOffsetPx":  210,
-    "marginBottom":  -35,
+    "trayOffsetPx":  244,
+    "marginBottom":  -36,
     "omitExtrasDates":  [
                             "2026-06-29"
                         ]
