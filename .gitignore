@@ -1,5 +1,7 @@
-# data/
+data/
+docs
 docs/*
-.claude/*
-.cursor/*
-.opencode/*
+.ai
+.claude
+.cursor
+.opencode

@@ -1,19 +1,23 @@
 # Workday — overlay de expediente
 
-Overlay leve com contagens do expediente (entrada, almoço, saída e extras), posicionado junto à barra de tarefas, com log de horas extras.
+https://github.com/user-attachments/assets/06cf29e9-9973-4698-a3dc-365ad1bd4aab
 
-## Executar (sem CMD aberto)
+Contador discreto do expediente encostado na barra de tarefas: quanto falta para entrar, almoçar e sair, e quanto tempo extra já passou da saída. Em paralelo, gera um relatório de horas extras a partir do histórico de ligar/desligar do Windows — sem registrar horários à mão.
 
-Dê **duplo clique** em `workday-start.vbs` (ou em `workday-start.bat`, que chama o VBS).
+Roda em PowerShell 5.1+, sem instalação. Some nos fins de semana; horários e posição são configuráveis.
 
-O VBS sobe o PowerShell em modo oculto — nenhuma janela de console fica aberta.
+## Executar (sem janela de console)
+
+Dê **duplo clique** em `workday-start.bat`.
+
+O overlay sobe em modo oculto — nenhuma janela de console fica aberta, só o contador junto à barra de tarefas.
 
 ## Iniciar com o Windows (opcional)
 
 1. Pressione `Win + R`, digite `shell:startup` e confirme.
-2. Crie um atalho para **`workday-start.vbs`** nessa pasta.
+2. Crie um atalho para **`workday-start.bat`** nessa pasta.
 
-Para remover: apague o atalho e encerre o processo PowerShell do overlay (Gerenciador de Tarefas).
+Para remover: apague o atalho e encerre o processo PowerShell do overlay no Gerenciador de Tarefas.
 
 ## Comportamento
 
@@ -28,7 +32,7 @@ Em **segunda a sexta** (horários padrão; configuráveis):
 | Extra | após a saída | Contagem `+HH:mm:ss` |
 
 - **Fim de semana:** overlay oculto
-- **Clique direito → Ver extras:** atualiza e abre o relatório de horas extras (após atualizar os scripts `.ps1`, reinicie o overlay — **Sair** e abra de novo — senão o processo antigo sobrescreve o relatório)
+- **Clique direito → Ver extras:** atualiza e abre o relatório `data/extras.md` (sync com o Event Log na subida do overlay e ao usar este item; após atualizar os scripts `.ps1`, reinicie o overlay — **Sair** e abra de novo — senão o processo antigo pode sobrescrever o relatório)
 - **Clique direito → Configurar…:** horários e posição (salva em `data/config.json`)
 - **Arrastar o overlay:** move e salva a posição
 - **Clique direito → Sair:** encerra o overlay
@@ -46,12 +50,13 @@ Arquivo: `data/config.json` (criado na primeira execução).
 | `leaveHour` | `18` | Hora de saída |
 | `trayOffsetPx` | `215` | Distância da borda direita |
 | `marginBottom` | `-35` | Margem em relação à base da área útil |
+| `omitExtrasDates` | `[]` | Datas `yyyy-MM-dd` com Early/Late/Short forçados a 0 |
 
 Prefira **Configurar…** no menu ou arrastar o overlay; editar o JSON também funciona (relê no próximo start).
 
 ## Log de extras (ligar / desligar)
 
-O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o histórico ainda retido** pelo log System) e gera:
+Na subida, o overlay consulta o **Event Log** do Windows (ligar/desligar — todo o histórico ainda retido pelo log System) e gera:
 
 | Arquivo | Uso |
 |---------|-----|
@@ -65,8 +70,12 @@ O overlay consulta o **Event Log** do Windows (ligar/desligar — **todo o hist�
 - **Dias úteis** e **fim de semana** têm totais separados
 - Detecta ligar/desligar (incluindo sleep híbrido do “Desligar” no Windows moderno)
 - Sessões curtas (&lt; 2h) vão para **Dias atípicos** (reinícios no mesmo dia com gap ≤ 30 min são fundidos antes do relatório)
-- **`omitExtrasDates`:** lista `yyyy-MM-dd` com Early, Late e Short forçados a 0 (casos à parte)
 - A pasta `data/` é local e está no `.gitignore`
+
+## Requisitos
+
+- Windows 10/11
+- PowerShell 5.1 ou superior (já incluso no Windows)
 
 ## Apoie
 
